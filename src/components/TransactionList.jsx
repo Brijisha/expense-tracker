@@ -42,17 +42,25 @@ import {
 import TransactionForm from "./TransactionForm";
 
 export default function TransactionList() {
-  const { transactions, categories, deleteTransaction } = useExpenses();
+  const { transactions, categories, deleteTransaction, monthTransactions, yearTransactions, months, selectedMonth, selectedYear } = useExpenses();
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [filterPeriod, setFilterPeriod] = useState("month");
   const [sortBy, setSortBy] = useState("date-desc");
   const [editingTx, setEditingTx] = useState(null);
 
   const getCategoryInfo = (id) =>
     categories.find((c) => c.id === id) || { icon: "📦", label: "Other", color: "#6b7280" };
 
-  const filtered = transactions
+  const baseTransactions =
+    filterPeriod === "month"
+      ? monthTransactions
+      : filterPeriod === "year"
+        ? yearTransactions
+        : transactions;
+
+  const filtered = baseTransactions
     .filter((t) => {
       if (filterType !== "all" && t.type !== filterType) return false;
       if (filterCategory !== "all" && t.category !== filterCategory)
@@ -85,8 +93,27 @@ export default function TransactionList() {
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle className="text-lg">Transactions</CardTitle>
+            <CardTitle className="text-lg">
+              Transactions
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                {filterPeriod === "month"
+                  ? `${months[selectedMonth]} ${selectedYear}`
+                  : filterPeriod === "year"
+                    ? selectedYear
+                    : "All Time"}
+              </span>
+            </CardTitle>
             <div className="flex flex-wrap items-center gap-2">
+              <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="month">This Month</SelectItem>
+                  <SelectItem value="year">This Year</SelectItem>
+                  <SelectItem value="all">All Time</SelectItem>
+                </SelectContent>
+              </Select>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -234,7 +261,7 @@ export default function TransactionList() {
           )}
           {filtered.length > 0 && (
             <p className="text-xs text-muted-foreground mt-4 text-right">
-              Showing {filtered.length} of {transactions.length} transactions
+              Showing {filtered.length} of {baseTransactions.length} transactions
             </p>
           )}
         </CardContent>

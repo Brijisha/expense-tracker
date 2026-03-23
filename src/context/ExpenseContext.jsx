@@ -1,6 +1,12 @@
-import { createContext, useContext, useReducer, useEffect } from "react";
+import { createContext, useContext, useReducer, useEffect, useState, useMemo } from "react";
+import { parseISO, getYear, getMonth } from "date-fns";
 
 const ExpenseContext = createContext();
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 const CATEGORIES = [
   { id: "food", label: "Food & Dining", icon: "🍔", color: "#f97316" },
@@ -52,6 +58,10 @@ export function ExpenseProvider({ children }) {
     loadFromStorage
   );
 
+  const now = new Date();
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
+
   useEffect(() => {
     saveToStorage(transactions);
   }, [transactions]);
@@ -75,29 +85,148 @@ export function ExpenseProvider({ children }) {
     dispatch({ type: "EDIT_TRANSACTION", payload: transaction });
   };
 
+  // All-time totals
   const totals = transactions.reduce(
     (acc, t) => {
       const amount = Number(t.amount);
-      if (t.type === "income") {
-        acc.income += amount;
-      } else {
-        acc.expense += amount;
-      }
+      if (t.type === "income") acc.income += amount;
+      else acc.expense += amount;
       acc.balance = acc.income - acc.expense;
       return acc;
     },
     { income: 0, expense: 0, balance: 0 }
   );
 
+  // Available years from 2020 to current year
+  const availableYears = useMemo(() => {
+    const currentYear = now.getFullYear();
+    const years = [];
+    for (let y = currentYear; y >= 2020; y--) {
+      years.push(y);
+    }
+    return years;
+  }, []);
+
+  // Transactions filtered by selected year
+  const yearTransactions = useMemo(
+    () => transactions.filter((t) => getYear(parseISO(t.date)) === selectedYear),
+    [transactions, selectedYear]
+  );
+
+  // Transactions filtered by selected year + month
+  const monthTransactions = useMemo(
+    () =>
+      yearTransactions.filter(
+        (t) => getMonth(parseISO(t.date)) === selectedMonth
+      ),
+    [yearTransactions, selectedMonth]
+  );
+
+  // Year totals
+  const yearTotals = useMemo(
+    () =>
+      yearTransactions.reduce(
+        (acc, t) => {
+          const amount = Number(t.amount);
+          if (t.type === "income") acc.income += amount;
+          else acc.expense += amount;
+          acc.balance = acc.income - acc.expense;
+          return acc;
+        },
+        { income: 0, expense: 0, balance: 0 }
+      ),
+    [yearTransactions]
+  );
+
+  // Month totals
+  const monthTotals = useMemo(
+    () =>
+      monthTransactions.reduce(
+        (acc, t) => {
+          const amount = Number(t.amount);
+          if (t.type === "income") acc.income += amount;
+          else acc.expense += amount;
+          acc.balance = acc.income - acc.expense;
+          return acc;
+        },
+        { income: 0, expense: 0, balance: 0 }
+      ),
+    [monthTransactions]
+  );
+
+  // Monthly breakdown for the selected year (all 12 months)
+  const monthlyBreakdown = useMemo(() => {
+    const data = MONTHS.map((name, i) => ({
+      month: i,
+      name: name.slice(0, 3),
+      fullName: name,
+      income: 0,
+      expense: 0,
+      balance: 0,
+      count: 0,
+    }));
+    yearTransactions.forEach((t) => {
+      const m = getMonth(parseISO(t.date));
+      const amount = Number(t.amount);
+      if (t.type === "income") data[m].income += amount;
+      else data[m].expense += amount;
+      data[m].balance = data[m].income - data[m].expense;
+      data[m].count += 1;
+    });
+    return data;
+  }, [yearTransactions]);
+
+  // Daily breakdown for the selected month
+  const dailyBreakdown = useMemo(() => {
+    const map = {};
+    monthTransactions.forEach((t) => {
+      const day = parseISO(t.date).getDate();
+      if (!map[day]) map[day] = { day, income: 0, expense: 0 };
+      if (t.type === "income") map[day].income += Number(t.amount);
+      else map[day].expense += Number(t.amount);
+    });
+    return Object.values(map).sort((a, b) => a.day - b.day);
+  }, [monthTransactions]);
+
+  // Category breakdown for filtered transactions
+  const getCategoryBreakdown = (txList) => {
+    const map = {};
+    txList
+      .filter((t) => t.type === "expense")
+      .forEach((t) => {
+        const cat = CATEGORIES.find((c) => c.id === t.category);
+        if (!cat) return;
+        if (!map[cat.id])
+          map[cat.id] = { id: cat.id, name: cat.label, value: 0, color: cat.color, icon: cat.icon };
+        map[cat.id].value += Number(t.amount);
+      });
+    return Object.values(map).sort((a, b) => b.value - a.value);
+  };
+
   return (
     <ExpenseContext.Provider
       value={{
         transactions,
         categories: CATEGORIES,
+        months: MONTHS,
         totals,
         addTransaction,
         deleteTransaction,
         editTransaction,
+        // Year/Month selection
+        selectedYear,
+        setSelectedYear,
+        selectedMonth,
+        setSelectedMonth,
+        availableYears,
+        // Filtered data
+        yearTransactions,
+        monthTransactions,
+        yearTotals,
+        monthTotals,
+        monthlyBreakdown,
+        dailyBreakdown,
+        getCategoryBreakdown,
       }}
     >
       {children}

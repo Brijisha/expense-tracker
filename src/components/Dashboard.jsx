@@ -1,8 +1,8 @@
 import { useExpenses } from "@/context/ExpenseContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Calendar } from "lucide-react";
 
-function StatCard({ title, amount, icon: Icon, variant }) {
+function StatCard({ title, amount, icon: Icon, variant, subtitle }) {
   const colorMap = {
     balance: "text-primary",
     income: "text-emerald-500",
@@ -26,6 +26,9 @@ function StatCard({ title, amount, icon: Icon, variant }) {
           <p className={`text-2xl font-bold tracking-tight ${colorMap[variant]}`}>
             ₹{Math.abs(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </p>
+          {subtitle && (
+            <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -33,27 +36,31 @@ function StatCard({ title, amount, icon: Icon, variant }) {
 }
 
 export default function Dashboard() {
-  const { totals } = useExpenses();
+  const { monthTotals, months, selectedMonth, selectedYear } = useExpenses();
+  const label = `${months[selectedMonth].slice(0, 3)} ${selectedYear}`;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <StatCard
-        title="Total Balance"
-        amount={totals.balance}
+        title="Balance"
+        amount={monthTotals.balance}
         icon={Wallet}
         variant="balance"
+        subtitle={label}
       />
       <StatCard
-        title="Total Income"
-        amount={totals.income}
+        title="Income"
+        amount={monthTotals.income}
         icon={TrendingUp}
         variant="income"
+        subtitle={label}
       />
       <StatCard
-        title="Total Expenses"
-        amount={totals.expense}
+        title="Expenses"
+        amount={monthTotals.expense}
         icon={TrendingDown}
         variant="expense"
+        subtitle={label}
       />
     </div>
   );

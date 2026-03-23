@@ -3,22 +3,42 @@ import { useExpenses } from "@/context/ExpenseContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function RecentActivity() {
-  const { transactions, categories } = useExpenses();
+  const { monthTransactions, categories, months, selectedMonth, selectedYear } = useExpenses();
 
   const recent = useMemo(
-    () => transactions.slice(0, 5),
-    [transactions]
+    () =>
+      [...monthTransactions]
+        .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))
+        .slice(0, 5),
+    [monthTransactions]
   );
 
   const getCat = (id) =>
     categories.find((c) => c.id === id) || { icon: "📦", label: "Other" };
 
-  if (recent.length === 0) return null;
+  if (recent.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Recent Activity</CardTitle>
+        </CardHeader>
+        <CardContent className="text-center text-muted-foreground py-8">
+          <p className="text-2xl mb-1">📭</p>
+          <p className="text-sm">No transactions in {months[selectedMonth].slice(0, 3)} {selectedYear}</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Recent Activity</CardTitle>
+        <CardTitle className="text-lg">
+          Recent Activity
+          <span className="text-sm font-normal text-muted-foreground ml-2">
+            {months[selectedMonth].slice(0, 3)} {selectedYear}
+          </span>
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {recent.map((tx) => {

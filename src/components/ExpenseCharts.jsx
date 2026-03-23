@@ -14,7 +14,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { format, parseISO, startOfMonth } from "date-fns";
+import { format } from "date-fns";
 
 function CustomTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
@@ -30,11 +30,11 @@ function CustomTooltip({ active, payload }) {
 }
 
 export default function ExpenseCharts() {
-  const { transactions, categories } = useExpenses();
+  const { transactions, categories, yearTransactions, monthlyBreakdown, selectedYear } = useExpenses();
 
   const categoryData = useMemo(() => {
     const map = {};
-    transactions
+    yearTransactions
       .filter((t) => t.type === "expense")
       .forEach((t) => {
         const cat = categories.find((c) => c.id === t.category);
@@ -45,30 +45,18 @@ export default function ExpenseCharts() {
         map[cat.id].value += Number(t.amount);
       });
     return Object.values(map).sort((a, b) => b.value - a.value);
-  }, [transactions, categories]);
+  }, [yearTransactions, categories]);
 
   const monthlyData = useMemo(() => {
-    const map = {};
-    transactions.forEach((t) => {
-      const monthKey = format(startOfMonth(parseISO(t.date)), "yyyy-MM");
-      if (!map[monthKey]) {
-        map[monthKey] = { month: format(parseISO(t.date), "MMM yyyy"), income: 0, expense: 0 };
-      }
-      if (t.type === "income") {
-        map[monthKey].income += Number(t.amount);
-      } else {
-        map[monthKey].expense += Number(t.amount);
-      }
-    });
-    return Object.values(map).sort((a, b) => a.month.localeCompare(b.month));
-  }, [transactions]);
+    return monthlyBreakdown.filter((m) => m.income > 0 || m.expense > 0);
+  }, [monthlyBreakdown]);
 
-  if (transactions.length === 0) {
+  if (yearTransactions.length === 0) {
     return (
       <Card>
         <CardContent className="py-12 text-center text-muted-foreground">
           <p className="text-4xl mb-2">📊</p>
-          <p>Add some transactions to see your charts!</p>
+          <p>No transactions for {selectedYear}. Add some to see charts!</p>
         </CardContent>
       </Card>
     );
@@ -79,7 +67,7 @@ export default function ExpenseCharts() {
       {/* Expense by Category - Pie Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Expenses by Category</CardTitle>
+          <CardTitle className="text-lg">Expenses by Category — {selectedYear}</CardTitle>
         </CardHeader>
         <CardContent>
           {categoryData.length === 0 ? (
@@ -127,7 +115,7 @@ export default function ExpenseCharts() {
       {/* Monthly Income vs Expenses - Bar Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Monthly Overview</CardTitle>
+          <CardTitle className="text-lg">Monthly Overview — {selectedYear}</CardTitle>
         </CardHeader>
         <CardContent>
           {monthlyData.length === 0 ? (
@@ -136,7 +124,7 @@ export default function ExpenseCharts() {
             </p>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={monthlyData}>
+              <BarChart data={monthlyData.length > 0 ? monthlyData : monthlyBreakdown}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis
                   dataKey="month"
