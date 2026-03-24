@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, useState, useMemo } from "react";
 import { parseISO, getYear, getMonth } from "date-fns";
+import { toast } from "sonner";
 
 const ExpenseContext = createContext();
 
@@ -32,8 +33,21 @@ function loadFromStorage() {
   }
 }
 
+function loadBudgets() {
+  try {
+    const data = localStorage.getItem("expense-tracker-budgets");
+    return data ? JSON.parse(data) : {};
+  } catch {
+    return {};
+  }
+}
+
 function saveToStorage(transactions) {
   localStorage.setItem("expense-tracker-data", JSON.stringify(transactions));
+}
+
+function saveBudgets(budgets) {
+  localStorage.setItem("expense-tracker-budgets", JSON.stringify(budgets));
 }
 
 function transactionReducer(state, action) {
@@ -61,10 +75,15 @@ export function ExpenseProvider({ children }) {
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
+  const [budgets, setBudgetsState] = useState(loadBudgets);
 
   useEffect(() => {
     saveToStorage(transactions);
   }, [transactions]);
+
+  useEffect(() => {
+    saveBudgets(budgets);
+  }, [budgets]);
 
   const addTransaction = (transaction) => {
     dispatch({
@@ -75,14 +94,17 @@ export function ExpenseProvider({ children }) {
         createdAt: new Date().toISOString(),
       },
     });
+    toast.success(`${transaction.type === "income" ? "Income" : "Expense"} added — ₹${Number(transaction.amount).toLocaleString("en-IN")}`);
   };
 
   const deleteTransaction = (id) => {
     dispatch({ type: "DELETE_TRANSACTION", payload: id });
+    toast.success("Transaction deleted");
   };
 
   const editTransaction = (transaction) => {
     dispatch({ type: "EDIT_TRANSACTION", payload: transaction });
+    toast.success("Transaction updated");
   };
 
   // All-time totals
@@ -203,6 +225,72 @@ export function ExpenseProvider({ children }) {
     return Object.values(map).sort((a, b) => b.value - a.value);
   };
 
+  // Budget management
+  const setBudget = (categoryId, amount) => {
+    const cat = CATEGORIES.find((c) => c.id === categoryId);
+    setBudgetsState((prev) => ({
+      ...prev,
+      [categoryId]: Number(amount),
+    }));
+    toast.success(`Budget set for ${cat?.label || categoryId} — ₹${Number(amount).toLocaleString("en-IN")}`);
+  };
+
+  const removeBudget = (categoryId) => {
+    const cat = CATEGORIES.find((c) => c.id === categoryId);
+    setBudgetsState((prev) => {
+      const next = { ...prev };
+      delete next[categoryId];
+      return next;
+    });
+    toast.success(`Budget removed for ${cat?.label || categoryId}`);
+  };
+
+  // Budget vs actual for current month
+  const budgetStatus = useMemo(() => {
+    const expenseCategories = CATEGORIES.filter(
+      (c) => !["salary", "freelance", "investment"].includes(c.id)
+    );
+    return expenseCategories
+      .filter((cat) => budgets[cat.id] > 0)
+      .map((cat) => {
+        const spent = monthTransactions
+          .filter((t) => t.type === "expense" && t.category === cat.id)
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        const budget = budgets[cat.id];
+        const percentage = budget > 0 ? (spent / budget) * 100 : 0;
+        return {
+          ...cat,
+          budget,
+          spent,
+          remaining: budget - spent,
+          percentage: Math.min(percentage, 100),
+          overBudget: spent > budget,
+        };
+      });
+  }, [budgets, monthTransactions]);
+
+  // Previous month data for comparison
+  const prevMonthData = useMemo(() => {
+    const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1;
+    const prevYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
+    const prevTx = transactions.filter(
+      (t) =>
+        getYear(parseISO(t.date)) === prevYear &&
+        getMonth(parseISO(t.date)) === prevMonth
+    );
+    const income = prevTx.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
+    const expense = prevTx.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
+    return {
+      month: prevMonth,
+      year: prevYear,
+      label: `${MONTHS[prevMonth].slice(0, 3)} ${prevYear}`,
+      income,
+      expense,
+      balance: income - expense,
+      count: prevTx.length,
+    };
+  }, [transactions, selectedMonth, selectedYear]);
+
   return (
     <ExpenseContext.Provider
       value={{
@@ -227,6 +315,13 @@ export function ExpenseProvider({ children }) {
         monthlyBreakdown,
         dailyBreakdown,
         getCategoryBreakdown,
+        // Budget system
+        budgets,
+        setBudget,
+        removeBudget,
+        budgetStatus,
+        // Comparison
+        prevMonthData,
       }}
     >
       {children}

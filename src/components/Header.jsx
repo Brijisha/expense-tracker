@@ -1,4 +1,6 @@
 import { Wallet } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
+import ExportData from "@/components/ExportData";
 
 export default function Header() {
   return (
@@ -10,9 +12,10 @@ export default function Header() {
           </div>
           <h1 className="text-xl font-bold tracking-tight">ExpenseTracker</h1>
         </div>
-        <p className="text-sm text-muted-foreground hidden sm:block">
-          Track your income & expenses
-        </p>
+        <div className="flex items-center gap-2">
+          <ExportData />
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

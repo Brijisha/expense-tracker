@@ -9,6 +9,9 @@ import ExpenseCharts from "@/components/ExpenseCharts";
 import RecentActivity from "@/components/RecentActivity";
 import MonthlyBreakdown from "@/components/MonthlyBreakdown";
 import YearlyOverview from "@/components/YearlyOverview";
+import BudgetManager from "@/components/BudgetManager";
+import SmartInsights from "@/components/SmartInsights";
+import MonthComparison from "@/components/MonthComparison";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   LayoutDashboard,
@@ -16,6 +19,7 @@ import {
   CalendarDays,
   CalendarRange,
   BarChart3,
+  Target,
 } from "lucide-react";
 
 function App() {
@@ -68,14 +72,22 @@ function App() {
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline">Analytics</span>
               </TabsTrigger>
+              <TabsTrigger value="budget" className="gap-2">
+                <Target className="h-4 w-4" />
+                <span className="hidden sm:inline">Budget</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="dashboard" className="space-y-4">
+              <SmartInsights />
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2">
                   <ExpenseCharts />
                 </div>
-                <RecentActivity />
+                <div className="space-y-4">
+                  <MonthComparison />
+                  <RecentActivity />
+                </div>
               </div>
             </TabsContent>
 
@@ -93,6 +105,10 @@ function App() {
 
             <TabsContent value="charts">
               <ExpenseCharts />
+            </TabsContent>
+
+            <TabsContent value="budget">
+              <BudgetManager />
             </TabsContent>
           </Tabs>
         </main>
