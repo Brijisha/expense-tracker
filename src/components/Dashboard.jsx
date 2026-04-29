@@ -3,27 +3,28 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Wallet, Calendar } from "lucide-react";
 
 function StatCard({ title, amount, icon: Icon, variant, subtitle }) {
-  const colorMap = {
-    balance: "text-primary",
-    income: "text-emerald-500",
-    expense: "text-rose-500",
+  const linearMap = {
+    balance: "from-violet-500 to-indigo-600",
+    income: "from-emerald-400 to-teal-600",
+    expense: "from-rose-400 to-red-600",
   };
 
-  const bgMap = {
-    balance: "bg-primary/10",
-    income: "bg-emerald-500/10",
-    expense: "bg-rose-500/10",
+  const textColorMap = {
+    balance: "text-violet-600 dark:text-violet-300",
+    income: "text-emerald-600 dark:text-emerald-300",
+    expense: "text-rose-600 dark:text-rose-300",
   };
 
   return (
-    <Card className="flex-1 min-w-[200px]">
+    <Card className="flex-1 min-w-50 overflow-hidden border-0 shadow-md">
+      <div className={`h-1.5 w-full bg-linear-to-r ${linearMap[variant]}`} />
       <CardContent className="flex items-center gap-4 p-6">
-        <div className={`rounded-xl p-3 ${bgMap[variant]}`}>
-          <Icon className={`h-6 w-6 ${colorMap[variant]}`} />
+        <div className={`rounded-xl bg-linear-to-br ${linearMap[variant]} p-3 shadow-md`}>
+          <Icon className="h-6 w-6 text-white" />
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <p className={`text-2xl font-bold tracking-tight ${colorMap[variant]}`}>
+          <p className="text-sm text-muted-foreground font-medium">{title}</p>
+          <p className={`text-2xl font-bold tracking-tight ${textColorMap[variant]}`}>
             ₹{Math.abs(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </p>
           {subtitle && (

@@ -78,7 +78,7 @@ export default function ExportData() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2 border-white/30 bg-white/15 text-white hover:bg-white/25 hover:text-white backdrop-blur">
           <Download className="h-4 w-4" />
           <span className="hidden sm:inline">Export</span>
         </Button>
